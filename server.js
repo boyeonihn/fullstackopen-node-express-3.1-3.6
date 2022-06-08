@@ -2,10 +2,16 @@
 
 const express = require('express');
 const app = express();
+const morgan = require('morgan'); 
 const PORT = 3001;
 
 app.use(express.json());
+app.use(morgan('tiny')); 
+morgan.token('object', function (request, response) {
+  return `${JSON.stringify(req.body)}`
+})
 
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :object'))
 let persons = [
     { 
       "id": 1,
@@ -63,8 +69,8 @@ app.delete('/api/persons/:id', (request, response) => {
 
 
 const generateId = () => {
-    const maxId = notes.length > 0
-      ? Math.max(...notes.map(n => n.id))
+    const maxId = persons.length > 0
+      ? Math.max(...persons.map(n => n.id)) // you need to do this b/c if you delete an entry, the length might be -1 but the biggest id number might still be there.
       : 0
     return maxId + 1
   }
@@ -72,15 +78,34 @@ const generateId = () => {
   
 
 app.post('/api/persons', (request, response) => {
-    const body = request.body 
-    
+    const body = request.body; 
+
+    if (!body.name) {
+      return response.status(400).json({
+        error: 'name is missing'
+      })
+    }
+    else if (!body.number) {
+      return response.status(400).json({
+        error: 'number is missing'
+      })
+    }
+
+    if (persons.some(entry => entry.name === body.name)) {
+      return response.status(400).json({
+        error: 'name must be unique'
+      })
+    }
+
+
     let entry = {
-        'id': generateId, 
+        'id': generateId(), 
         'name': body.name,
         'number': body.number  
     }
+    
 
-    persons = persons.push(entry)
+    persons.push(entry)
     response.json(entry)
 })
 
